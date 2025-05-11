@@ -96,11 +96,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact
 
-Princely Makhwara(ST10263265) - www.linkedin.com/in/princely-makhwara-096285197
-Aime Ndumuhire(ST10255663) - https://www.linkedin.com/in/aime-ishimwe-675557272/
-Fortunate Majere(ST10231459) - https://za.linkedin.com/in/fortunate-majere-205933289
-Sabelo Sibiya(ST10327016) - https://za.linkedin.com/in/sabelo-sibiya-712935289
-Enrique Arendse(10302006) - https://www.linkedin.com/in/enrique-arendse-033700231?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app
+1. Princely Makhwara(ST10263265) - www.linkedin.com/in/princely-makhwara-096285197
+2. Aime Ndumuhire(ST10255663) - https://www.linkedin.com/in/aime-ishimwe-675557272/
+3. Fortunate Majere(ST10231459) - https://za.linkedin.com/in/fortunate-majere-205933289
+4. Sabelo Sibiya(ST10327016) - https://za.linkedin.com/in/sabelo-sibiya-712935289
+5. Enrique Arendse(10302006) - https://www.linkedin.com/in/enrique-arendse-033700231?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app
 
 
 
