@@ -6,7 +6,7 @@
 
 BudgetIQ is a modern Android application designed to help users manage their personal finances effectively. Built with the latest Android technologies and following Material Design 3 principles, it offers a seamless and intuitive experience for tracking expenses, setting budgets, and achieving financial goals.
 
-YouTube Demo - https://youtu.be/nI3m0B2kv-A?si=XhkCsmSM5TVFS7Ug 
+YouTube Demo - https://youtu.be/wHG8fvPKgOM?si=ALBFnNd-lmAuoilw
 ## Features
 
 - **User Authentication**: Secure login and registration system
