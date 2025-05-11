@@ -6,6 +6,7 @@
 
 BudgetIQ is a modern Android application designed to help users manage their personal finances effectively. Built with the latest Android technologies and following Material Design 3 principles, it offers a seamless and intuitive experience for tracking expenses, setting budgets, and achieving financial goals.
 
+Github Repository: https://github.com/Princely24/BudgetIQ
 YouTube Demo - https://youtu.be/wHG8fvPKgOM?si=ALBFnNd-lmAuoilw
 ## Features
 
@@ -102,4 +103,4 @@ Sabelo Sibiya(ST10327016) - https://za.linkedin.com/in/sabelo-sibiya-712935289
 Enrique Arendse(10302006) - https://www.linkedin.com/in/enrique-arendse-033700231?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app
 
 
-Project Link: [https://github.com/yourusername/BudgetIQ](https://github.com/yourusername/BudgetIQ) 
+
