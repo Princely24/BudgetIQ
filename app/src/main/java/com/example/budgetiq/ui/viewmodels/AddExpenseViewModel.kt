@@ -11,7 +11,7 @@ import com.example.budgetiq.data.repository.CategoryRepository
 import com.example.budgetiq.data.repository.ExpenseRepository
 import com.example.budgetiq.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -46,20 +46,15 @@ class AddExpenseViewModel @Inject constructor(
     private fun loadCurrentUser() {
         viewModelScope.launch {
             try {
-                // For now, we'll use the first user in the database
-                // In a real app, you'd get this from a session manager
-                userRepository.getAllUsers().first().firstOrNull()?.let { user ->
-                    currentUserId = user.id
-                    loadCategories()
-                    
-                    // If no categories exist, create default ones
-                    if (categories.isEmpty()) {
-                        categoryRepository.createDefaultCategories(user.id)
-                        // Reload categories after creating defaults
+                // Use continuous Flow collection instead of one-time
+                userRepository.getAllUsers().collect { users ->
+                    val user = users.firstOrNull()
+                    if (user != null) {
+                        currentUserId = user.id
                         loadCategories()
+                    } else {
+                        saveState = SaveState.Error("No user found. Please log in first.")
                     }
-                } ?: run {
-                    saveState = SaveState.Error("No user found. Please log in first.")
                 }
             } catch (e: Exception) {
                 saveState = SaveState.Error("Failed to load user: ${e.message}")
@@ -71,7 +66,8 @@ class AddExpenseViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 currentUserId?.let { userId ->
-                    categoryRepository.getCategoriesForUser(userId).first().let { categoryList ->
+                    // Use continuous Flow collection to automatically update when data changes
+                    categoryRepository.getCategoriesForUser(userId).collect { categoryList ->
                         categories = categoryList
                     }
                 }
@@ -129,5 +125,10 @@ class AddExpenseViewModel @Inject constructor(
                 saveState = SaveState.Error(e.message ?: "Failed to save expense")
             }
         }
+    }
+
+    // Add a refresh function that can be called from UI
+    fun refresh() {
+        loadCategories()
     }
 } 

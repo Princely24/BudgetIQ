@@ -31,8 +31,16 @@ class MainActivity : ComponentActivity() {
 
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.Login.route
+                        startDestination = Screen.GetStarted.route
                     ) {
+                        composable(Screen.GetStarted.route) {
+                            GetStartedScreen(
+                                onNavigateToLogin = {
+                                    navController.navigate(Screen.Login.route)
+                                }
+                            )
+                        }
+
                         composable(Screen.Login.route) {
                             LoginScreen(
                                 onNavigateToRegister = {
@@ -40,7 +48,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToHome = {
                                     navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                        popUpTo(Screen.GetStarted.route) { inclusive = true }
                                     }
                                 }
                             )
@@ -53,7 +61,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToHome = {
                                     navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                        popUpTo(Screen.GetStarted.route) { inclusive = true }
                                     }
                                 }
                             )
@@ -80,6 +88,11 @@ class MainActivity : ComponentActivity() {
                             AddExpenseScreen(
                                 onNavigateBack = {
                                     navController.navigateUp()
+                                },
+                                onNavigateToHome = {
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Home.route) { inclusive = true }
+                                    }
                                 }
                             )
                         }
@@ -129,11 +142,11 @@ class MainActivity : ComponentActivity() {
                                 onNavigateBack = {
                                     navController.navigateUp()
                                 }
-                    )
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-}
     }
 }

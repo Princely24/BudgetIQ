@@ -115,6 +115,7 @@ fun ExpenseListScreen(
     var selectedEndDate by remember { mutableStateOf<LocalDate?>(null) }
     var showPeriodMenu by remember { mutableStateOf(false) }
 
+    // Refresh data when the screen becomes active
     LaunchedEffect(Unit) {
         viewModel.loadExpenses()
     }
@@ -129,6 +130,14 @@ fun ExpenseListScreen(
                     }
                 },
                 actions = {
+                    // Refresh button
+                    IconButton(
+                        onClick = { viewModel.refresh() },
+                        enabled = uiState !is ExpenseListViewModel.UiState.Loading
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    // Period selection menu
                     Box {
                         IconButton(onClick = { showPeriodMenu = true }) {
                             Icon(Icons.Default.DateRange, contentDescription = "Select Period")
@@ -174,6 +183,119 @@ fun ExpenseListScreen(
             )
         }
     ) { paddingValues ->
+        when (val state = uiState) {
+            is ExpenseListViewModel.UiState.Success -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    // Summary card
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Total Spending",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = currencyFormatter.format(state.totalAmount),
+                                    style = MaterialTheme.typography.headlineMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                                Text(
+                                    text = "${state.startDate.format(dateFormatter)} - ${state.endDate.format(dateFormatter)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Category breakdown
+                    if (state.categoryTotals.isNotEmpty()) {
+                        item {
+                            CategoryTotalsList(
+                                categoryTotals = state.categoryTotals,
+                                categories = state.categories,
+                                totalAmount = state.totalAmount,
+                                currencyFormatter = currencyFormatter
+                            )
+                        }
+                    }
+
+                    // Expenses list
+                    items(state.expenses) { expense ->
+                        val category = state.categories.find { it.id == expense.categoryId }
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onNavigateToViewExpense(expense.id) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = expense.description,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
+                                    Text(
+                                        text = category?.name ?: "Unknown Category",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = expense.date.format(dateFormatter),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = currencyFormatter.format(expense.amount),
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            is ExpenseListViewModel.UiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            is ExpenseListViewModel.UiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Error: ${state.message}",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
         if (showDatePicker) {
             val datePickerState = rememberDatePickerState(
                 initialSelectedDateMillis = System.currentTimeMillis()
@@ -199,199 +321,43 @@ fun ExpenseListScreen(
                                 if (isSelectingStartDate) {
                                     selectedStartDate = selectedDate
                                     isSelectingStartDate = false
-                                    // Keep the dialog open for end date selection
+                                    showDatePicker = true
                                 } else {
                                     selectedEndDate = selectedDate
-                                    // Validate date range
-                                    selectedStartDate?.let { startDate ->
-                                        if (selectedDate.isBefore(startDate)) {
-                                            // Swap dates if end date is before start date
-                                            val temp = selectedStartDate
-                                            selectedStartDate = selectedDate
-                                            selectedEndDate = temp
-                                        }
-                                        viewModel.setCustomDateRange(
-                                            selectedStartDate!!,
-                                            selectedEndDate!!
-                                        )
-                                    }
                                     showDatePicker = false
+                                    
+                                    if (selectedStartDate != null && selectedEndDate != null) {
+                                        viewModel.setCustomDateRange(selectedStartDate!!, selectedEndDate!!)
+                                    }
                                 }
                             }
                         }
                     ) {
-                        Text("OK")
+                        Text(if (isSelectingStartDate) "Next" else "Confirm")
                     }
                 },
                 dismissButton = {
                     TextButton(
-                        onClick = {
+                        onClick = { 
+                            showDatePicker = false
                             if (isSelectingStartDate) {
-                                showDatePicker = false
                                 selectedStartDate = null
-                                selectedEndDate = null
-                            } else {
-                                isSelectingStartDate = true
                                 selectedEndDate = null
                             }
                         }
                     ) {
-                        Text(if (isSelectingStartDate) "Cancel" else "Back")
+                        Text("Cancel")
                     }
                 }
             ) {
                 DatePicker(
                     state = datePickerState,
-                    title = { Text(if (isSelectingStartDate) "Select Start Date" else "Select End Date") },
-                    headline = { 
-                        if (!isSelectingStartDate && selectedStartDate != null) {
-                            Text(
-                                "Start Date: ${selectedStartDate?.format(dateFormatter)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    title = {
+                        Text(
+                            text = if (isSelectingStartDate) "Select Start Date" else "Select End Date"
+                        )
                     }
                 )
-            }
-        }
-
-        when (val state = uiState) {
-            is ExpenseListViewModel.UiState.Success -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    // Period summary
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            Text(
-                                text = when (state.selectedPeriod) {
-                                    TimePeriod.WEEK -> "This Week"
-                                    TimePeriod.MONTH -> "This Month"
-                                    TimePeriod.YEAR -> "This Year"
-                                    TimePeriod.CUSTOM -> "Custom Range"
-                                },
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "${state.startDate.format(dateFormatter)} - ${state.endDate.format(dateFormatter)}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Total: ${currencyFormatter.format(state.totalAmount)}",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                    }
-
-                    // Category totals
-                    CategoryTotalsList(
-                        categoryTotals = state.categoryTotals,
-                        categories = state.categories,
-                        totalAmount = state.totalAmount,
-                        currencyFormatter = currencyFormatter
-                    )
-
-                    if (state.expenses.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No expenses for this period")
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(state.expenses) { expense ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onNavigateToViewExpense(expense.id) }
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = currencyFormatter.format(expense.amount),
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = expense.date.format(dateFormatter),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = state.categories.find { it.id == expense.categoryId }?.name ?: "Unknown Category",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        if (expense.description.isNotBlank()) {
-                                            Text(
-                                                text = expense.description,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.padding(top = 4.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            is ExpenseListViewModel.UiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            ExpenseListViewModel.UiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
             }
         }
     }

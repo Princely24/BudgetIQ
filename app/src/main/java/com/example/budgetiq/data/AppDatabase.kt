@@ -16,7 +16,8 @@ import com.example.budgetiq.util.Converters
         User::class,
         Category::class,
         Expense::class,
-        BudgetGoal::class
+        BudgetGoal::class,
+        Badge::class
     ],
     version = 4,
     exportSchema = true
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun budgetGoalDao(): BudgetGoalDao
+    abstract fun badgeDao(): BadgeDao
 
     companion object {
         @Volatile
@@ -77,30 +79,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Drop the existing budget_goals table
-                database.execSQL("DROP TABLE IF EXISTS budget_goals")
-                
-                // Create the new budget_goals table with minAmount and maxAmount
-                database.execSQL("""
-                    CREATE TABLE IF NOT EXISTS budget_goals (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        userId INTEGER NOT NULL,
-                        categoryId INTEGER NOT NULL,
-                        minAmount REAL NOT NULL,
-                        maxAmount REAL NOT NULL,
-                        FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
-                        FOREIGN KEY(categoryId) REFERENCES categories(id) ON DELETE CASCADE
-                    )
-                """)
-                
-                // Create indices for foreign keys
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_budget_goals_userId ON budget_goals(userId)")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_budget_goals_categoryId ON budget_goals(categoryId)")
-            }
-        }
-
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -108,7 +86,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "budget_iq_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 INSTANCE = instance
                 instance

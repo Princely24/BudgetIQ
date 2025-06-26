@@ -163,6 +163,12 @@ fun CategoriesScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { viewModel.refresh() },
+                        enabled = uiState !is CategoriesViewModel.UiState.Loading
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add Category")
                     }

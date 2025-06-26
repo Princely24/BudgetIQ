@@ -8,7 +8,7 @@ import com.example.budgetiq.ui.screens.CategoryUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -36,11 +36,14 @@ class CategoriesViewModel @Inject constructor(
     private fun loadCurrentUser() {
         viewModelScope.launch {
             try {
-                userRepository.getAllUsers().first().firstOrNull()?.let { user ->
-                    currentUserId = user.id
-                    loadCategories()
-                } ?: run {
-                    _uiState.value = UiState.Error("No user found. Please log in first.")
+                userRepository.getAllUsers().collect { users ->
+                    val user = users.firstOrNull()
+                    if (user != null) {
+                        currentUserId = user.id
+                        loadCategories()
+                    } else {
+                        _uiState.value = UiState.Error("No user found. Please log in first.")
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Failed to load user: ${e.message}")
@@ -53,7 +56,7 @@ class CategoriesViewModel @Inject constructor(
             _uiState.value = UiState.Loading
             try {
                 currentUserId?.let { userId ->
-                    categoryRepository.getCategoriesForUser(userId).first().let { categories ->
+                    categoryRepository.getCategoriesForUser(userId).collect { categories ->
                         _uiState.value = UiState.Success(
                             categories = categories.map { category ->
                                 CategoryUiState(
@@ -78,7 +81,7 @@ class CategoriesViewModel @Inject constructor(
                 currentUserId?.let { userId ->
                     categoryRepository.createCategory(name, userId)
                         .onSuccess {
-                            loadCategories()
+                            // No need to manually reload - Flow will automatically update
                         }
                         .onFailure { e ->
                             _uiState.value = UiState.Error("Failed to create category: ${e.message}")
@@ -100,7 +103,7 @@ class CategoriesViewModel @Inject constructor(
                         val updatedCategory = category.copy(name = newName)
                         categoryRepository.updateCategory(updatedCategory)
                             .onSuccess {
-                                loadCategories()
+                                // No need to manually reload - Flow will automatically update
                             }
                             .onFailure { e ->
                                 _uiState.value = UiState.Error("Failed to update category: ${e.message}")
@@ -122,7 +125,7 @@ class CategoriesViewModel @Inject constructor(
                     .onSuccess { category ->
                         categoryRepository.deleteCategory(category)
                             .onSuccess {
-                                loadCategories()
+                                // No need to manually reload - Flow will automatically update
                             }
                             .onFailure { e ->
                                 _uiState.value = UiState.Error("Failed to delete category: ${e.message}")
@@ -135,5 +138,9 @@ class CategoriesViewModel @Inject constructor(
                 _uiState.value = UiState.Error("Failed to delete category: ${e.message}")
             }
         }
+    }
+
+    fun refresh() {
+        loadCategories()
     }
 } 

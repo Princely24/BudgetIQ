@@ -16,33 +16,57 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF81C784),
-    secondary = Color(0xFF4CAF50),
-    tertiary = Color(0xFF2E7D32)
+private val LightColorScheme = lightColorScheme(
+    primary = Primary,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryLight,
+    onPrimaryContainer = OnPrimary,
+    secondary = Secondary,
+    onSecondary = OnSecondary,
+    secondaryContainer = SecondaryLight,
+    onSecondaryContainer = OnSecondary,
+    tertiary = Tertiary,
+    onTertiary = OnTertiary,
+    tertiaryContainer = TertiaryLight,
+    onTertiaryContainer = OnTertiary,
+    background = Background,
+    onBackground = OnBackground,
+    surface = Surface,
+    onSurface = OnSurface,
+    surfaceVariant = SurfaceVariant,
+    onSurfaceVariant = OnSurfaceVariant,
+    error = Error,
+    onError = OnPrimary
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF4CAF50),
-    secondary = Color(0xFF81C784),
-    tertiary = Color(0xFF2E7D32)
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val DarkColorScheme = darkColorScheme(
+    primary = PrimaryLight,
+    onPrimary = OnBackground,
+    primaryContainer = Primary,
+    onPrimaryContainer = OnPrimary,
+    secondary = SecondaryLight,
+    onSecondary = OnBackground,
+    secondaryContainer = Secondary,
+    onSecondaryContainer = OnSecondary,
+    tertiary = TertiaryLight,
+    onTertiary = OnBackground,
+    tertiaryContainer = Tertiary,
+    onTertiaryContainer = OnTertiary,
+    background = Color(0xFF1C1B1F),
+    onBackground = OnPrimary,
+    surface = Color(0xFF2D2C31),
+    onSurface = OnPrimary,
+    surfaceVariant = Color(0xFF3D3C42),
+    onSurfaceVariant = OnPrimary,
+    error = Error,
+    onError = OnPrimary
 )
 
 @Composable
 fun BudgetIQTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

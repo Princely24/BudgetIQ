@@ -4,6 +4,7 @@ import androidx.room.*
 import com.example.budgetiq.data.model.Category
 import kotlinx.coroutines.flow.Flow
 
+
 @Dao
 interface CategoryDao {
     @Insert

@@ -8,12 +8,19 @@ import com.example.budgetiq.data.model.Expense
 import com.example.budgetiq.data.repository.CategoryRepository
 import com.example.budgetiq.data.repository.ExpenseRepository
 import com.example.budgetiq.data.repository.UserRepository
+import com.example.budgetiq.data.repository.BadgeRepository
+import com.example.budgetiq.data.model.Badge
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 
 enum class TimePeriod {
     WEEK, MONTH, YEAR, CUSTOM
@@ -23,7 +30,8 @@ enum class TimePeriod {
 class ExpenseListViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val categoryRepository: CategoryRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val badgeRepository: BadgeRepository
 ) : ViewModel() {
 
     sealed class UiState {
@@ -48,6 +56,9 @@ class ExpenseListViewModel @Inject constructor(
     private var customStartDate: LocalDate? = null
     private var customEndDate: LocalDate? = null
 
+    private val _badges = MutableStateFlow<List<Badge>>(emptyList())
+    val badges: StateFlow<List<Badge>> = _badges.asStateFlow()
+
     init {
         loadCurrentUser()
     }
@@ -55,12 +66,15 @@ class ExpenseListViewModel @Inject constructor(
     private fun loadCurrentUser() {
         viewModelScope.launch {
             try {
-                val user = userRepository.currentUser.first()
-                if (user != null) {
-                    currentUserId = user.id
-                    loadExpenses()
-                } else {
-                    _uiState.value = UiState.Error("No user found. Please log in first.")
+                userRepository.getAllUsers().collect { users ->
+                    val user = users.firstOrNull()
+                    if (user != null) {
+                        currentUserId = user.id
+                        loadExpenses()
+                        loadBadges()
+                    } else {
+                        _uiState.value = UiState.Error("No user found. Please log in first.")
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Failed to load user: ${e.message}")
@@ -124,6 +138,51 @@ class ExpenseListViewModel @Inject constructor(
             .sortedByDescending { it.total }
     }
 
+    private suspend fun checkConsistencyBadge(userId: Long, expenses: List<Expense>) {
+        if (expenses.isEmpty()) return
+        val today = LocalDate.now()
+        val last7Days = (0..6).map { today.minusDays(it.toLong()) }
+        val expenseDates = expenses.map { it.date }.toSet()
+        val hasStreak = last7Days.all { it in expenseDates }
+        if (hasStreak) {
+            // Only award once per streak (per week)
+            val weekOfYear = today.format(DateTimeFormatter.ofPattern("YYYY-ww"))
+            val badgeName = "Consistency Badge"
+            val alreadyAwarded = badgeRepository.getBadgesForUser(userId)
+                .firstOrNull()?.any { it.name == badgeName &&
+                    LocalDate.ofEpochDay(it.dateAwarded / (1000 * 60 * 60 * 24)).format(DateTimeFormatter.ofPattern("YYYY-ww")) == weekOfYear } == true
+            if (!alreadyAwarded) {
+                val badge = Badge(
+                    userId = userId,
+                    name = badgeName,
+                    description = "Logged expenses for 7 consecutive days!"
+                )
+                badgeRepository.awardBadge(badge)
+            }
+        }
+    }
+
+    private suspend fun checkFrugalBadge(userId: Long, expenses: List<Expense>, totalBudget: Double) {
+        if (totalBudget <= 0) return
+        val today = LocalDate.now()
+        val month = today.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val badgeName = "Frugal Badge"
+        val monthExpenses = expenses.filter { it.date.month == today.month && it.date.year == today.year }
+        val totalSpent = monthExpenses.sumOf { it.amount }
+        if (totalSpent < 0.8 * totalBudget) {
+            val alreadyAwarded = badgeRepository.hasBadgeForUserByMonth(userId, badgeName, month)
+            if (!alreadyAwarded) {
+                val badge = Badge(
+                    userId = userId,
+                    name = badgeName,
+                    description = "Spent less than 80% of your monthly budget!",
+                    amount = totalSpent
+                )
+                badgeRepository.awardBadge(badge)
+            }
+        }
+    }
+
     fun loadExpenses() {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
@@ -131,23 +190,32 @@ class ExpenseListViewModel @Inject constructor(
                 currentUserId?.let { userId ->
                     val (startDate, endDate) = getDateRangeForPeriod()
 
-                    // Load expenses and categories in parallel
-                    val expenses = expenseRepository.getExpensesForPeriod(userId, startDate, endDate).first()
-                    val categories = categoryRepository.getCategoriesForUser(userId).first()
+                    combine(
+                        expenseRepository.getExpensesForPeriod(userId, startDate, endDate),
+                        categoryRepository.getCategoriesForUser(userId)
+                    ) { expenses, categories ->
+                        val totalAmount = expenses.sumOf { it.amount }
+                        val categoryTotals = calculateCategoryTotals(expenses, categories)
 
-                    // Calculate totals
-                    val totalAmount = expenses.sumOf { it.amount }
-                    val categoryTotals = calculateCategoryTotals(expenses, categories)
+                        // Badge logic
+                        launch {
+                            checkConsistencyBadge(userId, expenses)
+                            // For Frugal badge, get total budget from BudgetGoalsViewModel or repository
+                            // Here, you may need to inject BudgetGoalsViewModel or pass totalBudget as a parameter
+                        }
 
-                    _uiState.value = UiState.Success(
-                        expenses = expenses,
-                        categories = categories,
-                        totalAmount = totalAmount,
-                        startDate = startDate,
-                        endDate = endDate,
-                        selectedPeriod = currentPeriod,
-                        categoryTotals = categoryTotals
-                    )
+                        UiState.Success(
+                            expenses = expenses,
+                            categories = categories,
+                            totalAmount = totalAmount,
+                            startDate = startDate,
+                            endDate = endDate,
+                            selectedPeriod = currentPeriod,
+                            categoryTotals = categoryTotals
+                        )
+                    }.collect { successState ->
+                        _uiState.value = successState
+                    }
                 } ?: run {
                     _uiState.value = UiState.Error("No user found")
                 }
@@ -155,5 +223,19 @@ class ExpenseListViewModel @Inject constructor(
                 _uiState.value = UiState.Error("Failed to load expenses: ${e.message}")
             }
         }
+    }
+
+    fun loadBadges() {
+        viewModelScope.launch {
+            val userId = currentUserId ?: return@launch
+            badgeRepository.getBadgesForUser(userId).collect { badgeList ->
+                _badges.value = badgeList
+            }
+        }
+    }
+
+    // Add a refresh function that can be called from UI
+    fun refresh() {
+        loadExpenses()
     }
 } 

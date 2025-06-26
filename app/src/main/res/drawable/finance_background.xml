@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background color -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M0,0h108v108h-108z" />
+    
+    <!-- Finance-themed pattern elements -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M54,20L74,40L34,40z" />
+    
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M54,88L74,68L34,68z" />
+    
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M20,54L40,34L40,74z" />
+    
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M88,54L68,34L68,74z" />
+    
+    <!-- Dollar sign in the center -->
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M54,38v32M50,38h8M50,70h8M48,44h12M48,64h12" />
+    
+    <!-- Circular elements -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M54,54m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
+    
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M54,54m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0" />
+</vector> 

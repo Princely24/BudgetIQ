@@ -4,6 +4,7 @@ import android.graphics.Color
 import com.example.budgetiq.data.dao.CategoryDao
 import com.example.budgetiq.data.model.Category
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -75,6 +76,8 @@ class CategoryRepository @Inject constructor(
     }
 
     suspend fun createDefaultCategories(userId: Long) {
+        val existing = getCategoriesForUser(userId).first()
+        if (existing.isNotEmpty()) return
         val defaultCategories = listOf(
             "Food & Dining",
             "Transportation",

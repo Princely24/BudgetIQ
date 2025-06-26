@@ -15,6 +15,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.budgetiq.ui.viewmodels.BudgetGoalsViewModel
 import java.text.NumberFormat
 import java.util.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.border
+import androidx.compose.ui.unit.Dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +58,12 @@ fun BudgetGoalsScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { viewModel.refresh() },
+                        enabled = uiState !is BudgetGoalsViewModel.UiState.Loading
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add Budget Goal")
                     }
@@ -268,88 +285,94 @@ fun BudgetGoalsScreen(
                         )
                     }
                 } else {
-                    LazyColumn(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(paddingValues)
                     ) {
-                        items(state.budgetGoals) { goal ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
+                        BudgetGoalsBarGraph(goals = state.budgetGoals)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(state.budgetGoals) { goal ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = goal.categoryName,
-                                                style = MaterialTheme.typography.titleMedium
-                                            )
-                                            Text(
-                                                text = "Min: ${currencyFormatter.format(goal.minAmount)}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                text = "Max: ${currencyFormatter.format(goal.maxAmount)}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                text = "Spent: ${currencyFormatter.format(goal.spent)}",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = when {
-                                                    goal.spent < goal.minAmount -> MaterialTheme.colorScheme.error
-                                                    goal.spent > goal.maxAmount -> MaterialTheme.colorScheme.error
-                                                    else -> MaterialTheme.colorScheme.onSurface
-                                                }
-                                            )
-                                        }
-                                        Row {
-                                            IconButton(
-                                                onClick = {
-                                                    selectedGoal = goal
-                                                    newMinAmount = goal.minAmount.toString()
-                                                    newMaxAmount = goal.maxAmount.toString()
-                                                    showEditDialog = true
-                                                }
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Edit,
-                                                    contentDescription = "Edit Budget Goal"
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = {
-                                                    selectedGoal = goal
-                                                    showDeleteDialog = true
-                                                }
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Delete,
-                                                    contentDescription = "Delete Budget Goal"
-                                                )
-                                            }
-                                        }
-                                    }
-                                    LinearProgressIndicator(
-                                        progress = (goal.spent / goal.maxAmount).toFloat().coerceIn(0f, 1f),
+                                    Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(top = 8.dp),
-                                        color = when {
-                                            goal.spent < goal.minAmount -> MaterialTheme.colorScheme.error
-                                            goal.spent > goal.maxAmount -> MaterialTheme.colorScheme.error
-                                            else -> MaterialTheme.colorScheme.primary
+                                            .padding(16.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = goal.categoryName,
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                                Text(
+                                                    text = "Min: ${currencyFormatter.format(goal.minAmount)}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    text = "Max: ${currencyFormatter.format(goal.maxAmount)}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    text = "Spent: ${currencyFormatter.format(goal.spent)}",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = when {
+                                                        goal.spent < goal.minAmount -> MaterialTheme.colorScheme.error
+                                                        goal.spent > goal.maxAmount -> MaterialTheme.colorScheme.error
+                                                        else -> MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                )
+                                            }
+                                            Row {
+                                                IconButton(
+                                                    onClick = {
+                                                        selectedGoal = goal
+                                                        newMinAmount = goal.minAmount.toString()
+                                                        newMaxAmount = goal.maxAmount.toString()
+                                                        showEditDialog = true
+                                                    }
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Edit,
+                                                        contentDescription = "Edit Budget Goal"
+                                                    )
+                                                }
+                                                IconButton(
+                                                    onClick = {
+                                                        selectedGoal = goal
+                                                        showDeleteDialog = true
+                                                    }
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Delete,
+                                                        contentDescription = "Delete Budget Goal"
+                                                    )
+                                                }
+                                            }
                                         }
-                                    )
+                                        LinearProgressIndicator(
+                                            progress = (goal.spent / goal.maxAmount).toFloat().coerceIn(0f, 1f),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 8.dp),
+                                            color = when {
+                                                goal.spent < goal.minAmount -> MaterialTheme.colorScheme.error
+                                                goal.spent > goal.maxAmount -> MaterialTheme.colorScheme.error
+                                                else -> MaterialTheme.colorScheme.primary
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -377,6 +400,68 @@ fun BudgetGoalsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BudgetGoalsBarGraph(goals: List<BudgetGoalUiState>) {
+    val barHeight = 28.dp
+    val barSpacing = 16.dp
+    val maxBudget = goals.maxOfOrNull { it.maxAmount }?.takeIf { it > 0 } ?: 1.0
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Budget Progress by Category",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            goals.forEach { goal ->
+                val progress = (goal.spent / goal.maxAmount).toFloat().coerceIn(0f, 1f)
+                val barColor = when {
+                    goal.spent < goal.minAmount -> MaterialTheme.colorScheme.secondary
+                    goal.spent > goal.maxAmount -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.primary
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = barSpacing)
+                ) {
+                    Text(
+                        text = goal.categoryName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.width(110.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .height(barHeight)
+                            .weight(1f)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progress)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(barColor)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${"%.0f".format(goal.spent)} / ${"%.0f".format(goal.maxAmount)}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

@@ -27,6 +27,7 @@ import java.time.LocalTime
 @Composable
 fun AddExpenseScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToHome: () -> Unit,
     viewModel: AddExpenseViewModel = hiltViewModel(),
     cameraViewModel: CameraViewModel = hiltViewModel()
 ) {
@@ -59,7 +60,7 @@ fun AddExpenseScreen(
 
     LaunchedEffect(viewModel.saveState) {
         if (viewModel.saveState is AddExpenseViewModel.SaveState.Success) {
-            onNavigateBack()
+            onNavigateToHome()
         }
     }
 
