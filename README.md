@@ -54,7 +54,7 @@ The app follows Clean Architecture principles and is organized into the followin
    ```bash
    git clone https://github.com/yourusername/BudgetIQ.git
    ```
-
+##
 2. Open the project in Android Studio
 
 3. Sync the project with Gradle files
